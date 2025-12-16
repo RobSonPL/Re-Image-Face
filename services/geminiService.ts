@@ -205,17 +205,14 @@ export const generateHeadshotVideo = async (
 
     while (!operation.done) {
       await new Promise(resolve => setTimeout(resolve, 10000));
-      // Fix: The latest SDK expects passing the name in an object for getVideosOperation
-      if (operation.name) {
-          operation = await ai.operations.getVideosOperation({ name: operation.name });
-      } else {
-          // Fallback if name is missing (should not happen for valid op)
-          break; 
-      }
+      // Use the standard parameter structure for getVideosOperation
+      operation = await ai.operations.getVideosOperation({ operation: operation });
     }
 
     if (operation.error) {
-        throw new Error(operation.error.message || "Video generation failed");
+        // Cast error to any to access message safely, or stringify if it's a complex object
+        const msg = (operation.error as any).message || JSON.stringify(operation.error) || "Video generation failed";
+        throw new Error(msg);
     }
 
     const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
