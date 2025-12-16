@@ -1,5 +1,15 @@
-
 import { GoogleGenAI } from "@google/genai";
+
+declare const process: {
+  env: {
+    API_KEY: string;
+  }
+};
+
+// Vercel/Vite uses import.meta.env for environment variables, 
+// but Google GenAI guidelines require process.env.API_KEY.
+// We assume the bundler replaces process.env.API_KEY with the actual key.
+const API_KEY = process.env.API_KEY || '';
 
 export const resizeImage = async (base64Str: string, maxWidth: number = 300, quality: number = 0.8): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -44,7 +54,9 @@ export const generateHeadshot = async (
   prompt: string
 ): Promise<string> => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    if (!API_KEY) throw new Error("API Key is missing. Please check your Vercel settings.");
+    
+    const ai = new GoogleGenAI({ apiKey: API_KEY });
     
     // OPTIMIZATION: Resize image before sending to API.
     // Extremely large base64 strings (from 4k images) often cause the API to timeout or return empty responses.
@@ -120,7 +132,8 @@ export const generateVeoPrompt = async (
   imageBase64: string,
   motionInstruction: string
 ): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  if (!API_KEY) throw new Error("API Key is missing.");
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
 
   // Extract mime type and clean base64
   let mimeType = 'image/jpeg';
@@ -162,7 +175,8 @@ export const generateHeadshotVideo = async (
   prompt: string
 ): Promise<string> => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    if (!API_KEY) throw new Error("API Key is missing.");
+    const ai = new GoogleGenAI({ apiKey: API_KEY });
 
     // Extract mime type and clean base64
     let mimeType = 'image/jpeg';
@@ -190,7 +204,7 @@ export const generateHeadshotVideo = async (
     });
 
     while (!operation.done) {
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise(resolve => setTimeout(resolve, 10000));
       operation = await ai.operations.getVideosOperation({operation: operation});
     }
 
@@ -204,7 +218,7 @@ export const generateHeadshotVideo = async (
     }
 
     // Fetch the video content with the API key appended
-    const videoResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+    const videoResponse = await fetch(`${downloadLink}&key=${API_KEY}`);
     if (!videoResponse.ok) {
         throw new Error(`Failed to download video: ${videoResponse.statusText}`);
     }
