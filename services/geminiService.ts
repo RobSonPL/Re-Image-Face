@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 
 declare const process: {
   env: {
@@ -92,12 +92,12 @@ export const generateHeadshot = async (
         ],
       },
       config: {
-        // Adjust safety settings to prevent over-filtering of styles like "Erotic" or "Sexy"
+        // Use proper Enums for safety settings to satisfy TypeScript
         safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
         ],
       }
     });
@@ -205,7 +205,13 @@ export const generateHeadshotVideo = async (
 
     while (!operation.done) {
       await new Promise(resolve => setTimeout(resolve, 10000));
-      operation = await ai.operations.getVideosOperation({operation: operation});
+      // Fix: The latest SDK expects passing the name in an object for getVideosOperation
+      if (operation.name) {
+          operation = await ai.operations.getVideosOperation({ name: operation.name });
+      } else {
+          // Fallback if name is missing (should not happen for valid op)
+          break; 
+      }
     }
 
     if (operation.error) {
